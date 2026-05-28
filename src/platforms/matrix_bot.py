@@ -128,7 +128,7 @@ class MatrixBot(Bot):
         stat = os.stat(filepath)
 
         upload_response, _ = await self._client.upload(
-            lambda: open(filepath, "rb"),
+            lambda got_429, got_timeouts: open(filepath, "rb"),
             content_type="video/mp4",
             filename=filename,
             filesize=stat.st_size,
