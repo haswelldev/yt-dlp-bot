@@ -2,7 +2,6 @@ import asyncio
 import logging
 import os
 import signal
-import sys
 import traceback
 
 import nio
@@ -10,6 +9,7 @@ import nio
 from src.bot import Bot
 from src.config import Config
 from src.downloader import DownloadError, Downloader, FileTooLargeError
+from src.sync_store import SyncStore
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +18,7 @@ class MatrixBot(Bot):
     def __init__(self, config: Config):
         self._config = config
         self._downloader = Downloader(config)
+        self._store = SyncStore(config)
         self._client = nio.AsyncClient(
             homeserver=config.homeserver_url,
             user=config.user_id,
@@ -32,7 +33,18 @@ class MatrixBot(Bot):
 
         self._client.add_event_callback(self._on_message, nio.RoomMessageText)
 
-        sync_token = None
+        sync_token = self._store.load()
+
+        if sync_token is None:
+            logger.info("No saved sync token, catching up on history...")
+            response = await self._client.sync(timeout=30000)
+            if isinstance(response, nio.SyncResponse):
+                sync_token = response.next_batch
+                self._store.save(sync_token)
+                logger.info("Caught up, resuming from %s", sync_token)
+            elif isinstance(response, nio.SyncError):
+                logger.error("Initial sync error: %s", response.message)
+
         while self._running:
             try:
                 response = await self._client.sync(
@@ -41,6 +53,7 @@ class MatrixBot(Bot):
                 )
                 if isinstance(response, nio.SyncResponse):
                     sync_token = response.next_batch
+                    self._store.save(sync_token)
                 elif isinstance(response, nio.SyncError):
                     logger.error("Sync error: %s", response.message)
             except asyncio.CancelledError:
