@@ -64,6 +64,8 @@ curl -XPOST "https://matrix.org/_matrix/client/v3/login" -d '{"type":"m.login.pa
 
 ## Deployment
 
+The Docker image includes [Deno](https://deno.land/) as a JavaScript runtime, which yt-dlp needs to solve YouTube's signature challenges (nsig extraction). Without it, YouTube downloads will fail with `n challenge solving failed`.
+
 ### Docker Compose (recommended)
 
 A pre-built Docker image is available at `ghcr.io/haswelldev/yt-dlp-bot`.

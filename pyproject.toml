@@ -5,6 +5,7 @@ description = "A chat bot that downloads videos via yt-dlp and sends them as rep
 requires-python = ">=3.10"
 dependencies = [
     "matrix-nio>=0.25.0",
+    "yt-dlp[default]>=2025.0.0",
 ]
 
 [project.optional-dependencies]
