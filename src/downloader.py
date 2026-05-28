@@ -2,6 +2,7 @@ import glob
 import os
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 
 from src.config import Config
@@ -38,7 +39,7 @@ class Downloader:
             self._cookies_path = cookies_dest
 
     def _run_ytdlp(self, args: list[str]) -> str:
-        cmd = ["yt-dlp", "--no-playlist"]
+        cmd = [sys.executable, "-m", "yt_dlp", "--no-playlist"]
         if self._cookies_path:
             cmd += ["--cookies", self._cookies_path]
         cmd += args
