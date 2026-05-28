@@ -1,0 +1,56 @@
+name: Rebuild on yt-dlp update
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - name: Get latest yt-dlp version from PyPI
+        id: pypi
+        run: |
+          VERSION=$(curl -s https://pypi.org/pypi/yt-dlp/json | python3 -c "import sys,json; print(json.load(sys.stdin)['info']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Compare with known version
+        id: compare
+        run: |
+          KNOWN=$(cat .yt-dlp-version 2>/dev/null || echo "none")
+          LATEST="${{ steps.pypi.outputs.version }}"
+          if [ "$KNOWN" != "$LATEST" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "New yt-dlp version: $KNOWN -> $LATEST"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "yt-dlp version unchanged: $LATEST"
+          fi
+
+      - name: Update version file
+        if: steps.compare.outputs.changed == 'true'
+        run: echo "${{ steps.pypi.outputs.version }}" > .yt-dlp-version
+
+      - name: Commit version bump
+        if: steps.compare.outputs.changed == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Bump yt-dlp version to ${{ steps.pypi.outputs.version }}"
+          file_pattern: .yt-dlp-version
+
+  rebuild:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Docker image rebuild
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Build and push Docker image
+          ref: main
