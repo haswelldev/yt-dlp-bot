@@ -1,0 +1,10 @@
+services:
+  yt-dlp-bot:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - downloads:/tmp/yt-dlp-bot
+
+volumes:
+  downloads:
