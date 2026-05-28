@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 from dataclasses import dataclass
 
@@ -29,11 +30,16 @@ class Downloader:
     def __init__(self, config: Config):
         self._config = config
         os.makedirs(config.download_dir, exist_ok=True)
+        self._cookies_path: str | None = None
+        if config.cookies_file:
+            cookies_dest = os.path.join(config.download_dir, "cookies.txt")
+            shutil.copy2(config.cookies_file, cookies_dest)
+            self._cookies_path = cookies_dest
 
     def _run_ytdlp(self, args: list[str]) -> str:
         cmd = ["yt-dlp", "--no-playlist"]
-        if self._config.cookies_file:
-            cmd += ["--cookies", self._config.cookies_file]
+        if self._cookies_path:
+            cmd += ["--cookies", self._cookies_path]
         cmd += args
         result = subprocess.run(
             cmd,
