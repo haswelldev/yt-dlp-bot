@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 import subprocess
@@ -58,32 +59,53 @@ class Downloader:
         title = self._run_ytdlp(["--get-title", url])
 
         output_template = os.path.join(
-            self._config.download_dir, "%(id)s.%(ext)s"
+            self._config.download_dir, f"{video_id}.%(ext)s"
         )
 
-        self._run_ytdlp(
-            [
-                "--merge-output-format",
-                "mp4",
-                "-o",
-                output_template,
-                url,
-            ]
-        )
+        try:
+            self._run_ytdlp(
+                [
+                    "--merge-output-format",
+                    "mp4",
+                    "-o",
+                    output_template,
+                    url,
+                ]
+            )
+        except DownloadError:
+            self._run_ytdlp(
+                [
+                    "-f",
+                    "bestvideo+bestaudio/best",
+                    "-o",
+                    output_template,
+                    url,
+                ]
+            )
 
-        expected_path = os.path.join(self._config.download_dir, f"{video_id}.mp4")
+        downloaded = self._find_file(video_id)
+        if not downloaded:
+            raise DownloadError(
+                f"Downloaded file not found for video {video_id}"
+            )
 
-        if not os.path.exists(expected_path):
-            raise DownloadError(f"Downloaded file not found: {expected_path}")
-
-        stat = os.stat(expected_path)
+        stat = os.stat(downloaded)
         size_mb = stat.st_size / (1024 * 1024)
 
         if size_mb > self._config.max_file_size_mb:
-            os.unlink(expected_path)
+            os.unlink(downloaded)
             raise FileTooLargeError(size_mb, self._config.max_file_size_mb)
 
-        return DownloadedFile(path=expected_path, title=title, size_mb=size_mb)
+        return DownloadedFile(path=downloaded, title=title, size_mb=size_mb)
+
+    def _find_file(self, video_id: str) -> str | None:
+        pattern = os.path.join(self._config.download_dir, f"{video_id}.*")
+        matches = glob.glob(pattern)
+        image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
+        for match in sorted(matches, key=lambda f: os.path.getsize(f), reverse=True):
+            if os.path.splitext(match)[1].lower() not in image_extensions:
+                return match
+        return matches[0] if matches else None
 
     def cleanup(self, filepath: str) -> None:
         try:
