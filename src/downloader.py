@@ -31,8 +31,12 @@ class Downloader:
         os.makedirs(config.download_dir, exist_ok=True)
 
     def _run_ytdlp(self, args: list[str]) -> str:
+        cmd = ["yt-dlp", "--no-playlist"]
+        if self._config.cookies_file:
+            cmd += ["--cookies", self._config.cookies_file]
+        cmd += args
         result = subprocess.run(
-            ["yt-dlp", "--no-playlist"] + args,
+            cmd,
             capture_output=True,
             text=True,
             timeout=300,

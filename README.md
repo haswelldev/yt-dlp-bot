@@ -23,8 +23,32 @@ All configuration is done via environment variables:
 | `MATRIX_ACCESS_TOKEN` | Yes | — | Bot's Matrix access token |
 | `MAX_FILE_SIZE_MB` | No | `50` | Maximum file size in MB; files exceeding this are rejected |
 | `DOWNLOAD_DIR` | No | `/tmp/yt-dlp-bot` | Directory for temporary video downloads |
+| `COOKIES_FILE` | No | — | Path to a Netscape-format cookies file for yt-dlp (see below) |
 | `BOT_PREFIX` | No | `!` | Command prefix character |
 | `FETCH_COMMAND` | No | `fetch` | Command name (combined with prefix, e.g. `!fetch`) |
+
+### Cookie-based authentication
+
+YouTube may require authentication to verify you're not a bot. If you see errors like `Sign in to confirm you're not a bot`, you need to provide browser cookies to yt-dlp:
+
+1. Install the [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/ccleldeahabstforpzhmbaelsjhjcbmm) browser extension
+2. Export cookies for `youtube.com` in Netscape format
+3. Save the file as `cookies.txt` in a directory visible to the bot
+
+In Docker, mount the cookies file and point `COOKIES_FILE` to it:
+
+```yaml
+services:
+  yt-dlp-bot:
+    image: ghcr.io/haswelldev/yt-dlp-bot:main
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - downloads:/tmp/yt-dlp-bot
+      - ./cookies.txt:/app/cookies.txt:ro
+    environment:
+      - COOKIES_FILE=/app/cookies.txt
+```
 
 ### Getting a Matrix access token
 
@@ -62,6 +86,8 @@ services:
     restart: unless-stopped
     volumes:
       - downloads:/tmp/yt-dlp-bot
+      # Uncomment the next line if you need cookies for YouTube auth:
+      # - ./cookies.txt:/app/cookies.txt:ro
 
 volumes:
   downloads:

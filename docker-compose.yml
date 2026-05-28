@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     volumes:
       - downloads:/tmp/yt-dlp-bot
+      # Uncomment the next line if you need cookies for YouTube auth:
+      # - ./cookies.txt:/app/cookies.txt:ro
 
 volumes:
   downloads:
