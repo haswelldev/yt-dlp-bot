@@ -55,6 +55,45 @@ class Downloader:
             )
         return result.stdout.strip()
 
+    def _needs_transcode(self, filepath: str) -> bool:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v", "quiet",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=codec_name",
+                "-of", "csv=p=0",
+                filepath,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        video_codec = result.stdout.strip()
+        return video_codec not in ("h264", "avc1", "")
+
+    def _transcode(self, filepath: str) -> str:
+        output = filepath.rsplit(".", 1)[0] + "_h264.mp4"
+        subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", filepath,
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "23",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-movflags", "+faststart",
+                output,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=600,
+            check=True,
+        )
+        os.unlink(filepath)
+        return output
+
     def download(self, url: str) -> DownloadedFile:
         video_id = self._run_ytdlp(["--get-id", url])
         title = self._run_ytdlp(["--get-title", url])
@@ -66,6 +105,7 @@ class Downloader:
         try:
             self._run_ytdlp(
                 [
+                    "-S", "vcodec:h264,res:1080",
                     "--merge-output-format",
                     "mp4",
                     "-o",
@@ -76,8 +116,7 @@ class Downloader:
         except DownloadError:
             self._run_ytdlp(
                 [
-                    "-f",
-                    "bestvideo+bestaudio/best",
+                    "-f", "bestvideo+bestaudio/best",
                     "-o",
                     output_template,
                     url,
@@ -89,6 +128,9 @@ class Downloader:
             raise DownloadError(
                 f"Downloaded file not found for video {video_id}"
             )
+
+        if self._needs_transcode(downloaded):
+            downloaded = self._transcode(downloaded)
 
         stat = os.stat(downloaded)
         size_mb = stat.st_size / (1024 * 1024)
