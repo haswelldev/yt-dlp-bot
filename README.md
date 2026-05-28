@@ -57,7 +57,7 @@ cp .env.example .env
 # docker-compose.yml
 services:
   yt-dlp-bot:
-    image: ghcr.io/haswelldev/yt-dlp-bot:latest
+    image: ghcr.io/haswelldev/yt-dlp-bot:main
     env_file: .env
     restart: unless-stopped
     volumes:
