@@ -8,9 +8,14 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       changed: ${{ steps.compare.outputs.changed }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Get latest yt-dlp version from PyPI
         id: pypi
         run: |
