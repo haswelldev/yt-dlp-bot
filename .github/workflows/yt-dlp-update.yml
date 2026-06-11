@@ -51,7 +51,7 @@ jobs:
     if: needs.check.outputs.changed == 'true'
     permissions:
       contents: read
-      packages: write
+      actions: write
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Docker image rebuild
